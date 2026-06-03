@@ -27,8 +27,9 @@ SERIES_LABELS = {
     'N1': 'N1 Toplam (Nitgo)', 'N1_M': 'N1 M Bedeni', 'N1_L': 'N1 L Bedeni', 'N1_XL': 'N1 XL Bedeni'
 }
 MODEL_LABELS = {
-    'Random_Forest': 'Random Forest', 'XGBoost': 'XGBoost', 'MA_3': 'Hareketli Ort. (3 Ay)',
-    'MA_6': 'Hareketli Ort. (6 Ay)', 'SARIMA': 'SARIMA', 'Holt_Winters': 'Holt-Winters', 'Naive': 'Naive'
+    'Random_Forest': 'Random Forest', 'XGBoost': 'XGBoost', 'Linear_Regression': 'Doğrusal Regresyon',
+    'MA_3': 'Hareketli Ort. (3 Ay)', 'MA_6': 'Hareketli Ort. (6 Ay)',
+    'SARIMA': 'SARIMA', 'Holt_Winters': 'Holt-Winters', 'Naive': 'Naive'
 }
 
 # 4. YAN MENÜ (SIDEBAR)
