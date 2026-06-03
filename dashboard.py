@@ -9,6 +9,17 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+[data-testid="stMetricValue"] > div {
+    white-space: normal !important;
+    word-break: break-word;
+    font-size: 1.8rem !important;
+    line-height: 1.2 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # 2. VERİ YÜKLEME
 @st.cache_data
 def load_data():
@@ -48,8 +59,8 @@ if menu == "Ana Sayfa":
 
     # Özet Metrikler
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Toplam Ürün Sayısı", "5 Kod + 3 Beden")
-    c2.metric("Test Edilen Algoritmalar", "7 Farklı Model")
+    c1.metric("Toplam Ürün Serisi", "5 Kod + 3 Beden")
+    c2.metric("Test Edilen Algoritmalar", "8 Farklı Model")
     c3.metric("3 Aylık Toplam Tahmin", f"{int(forecast_df['Forecast'].sum()):,} Adet")
     c4.metric("Ortalama Hata (WMAPE)", f"%{best_df['MAPE'].mean():.1f}")
     
@@ -172,19 +183,130 @@ elif menu == "Model Karşılaştırma":
 elif menu == "Proje Hakkında":
     st.title("Proje Hakkında")
     st.markdown("---")
+
+    st.subheader("Projenin Amacı")
     st.markdown("""
-    ### Hakkında
-    Bu karar destek sistemi, **Variteks** firmasının siparişe dayalı üretim planlamasını iyileştirmek için geliştirilmiştir.
-    Ocak 2023 - Nisan 2026 tarihleri arasındaki fatura verileri kullanılarak, çeşitli yapay zeka (Makine Öğrenmesi) ve 
-    klasik zaman serisi algoritmaları yarışmaya sokulmuş ve en düşük hataya (WMAPE) sahip modeller seçilmiştir.
-    
-    ### Kullanılan Yöntemler
-    * **Makine Öğrenmesi:** XGBoost, Random Forest
-    * **Zaman Serisi:** SARIMA, Holt-Winters
-    * **Basit Yöntemler:** Hareketli Ortalama (3 ve 6 Ay), Naive
-    
-    ### Değerlendirme
-    Küçük sipariş aylarında yanıltıcı yüzdeler üretmemesi için metrik olarak **WMAPE (Ağırlıklı Ortalama Mutlak Yüzde Hata)** 
-    tercih edilmiştir. Veri setindeki aykırı değerler **IQR (Tukey) Yöntemi** ile üst sınıra çekilmiş ve böylece trendin 
-    bozulması engellenmiştir.
+    Bu karar destek sistemi, **Variteks** firmasının siparişe dayalı üretim planlamasını
+    veri odaklı bir yaklaşımla iyileştirmek amacıyla geliştirilmiştir. Firma, üretim
+    miktarlarını geleneksel olarak deneyime dayalı belirlemektedir. Bu projede ise
+    geçmiş fatura verileri kullanılarak **makine öğrenmesi ve istatistiksel yöntemlerle**
+    gelecek 3 aylık talep tahmini üretilmiş ve karar vericilere sunulmuştur.
     """)
+
+    st.markdown("---")
+
+    st.subheader("Veri Seti")
+    v1, v2, v3 = st.columns(3)
+    v1.metric("Kapsam", "Ocak 2023 - Nisan 2026")
+    v2.metric("Toplam Süre", "40 Ay")
+    v3.metric("Tahmin Dönemi", "Mayıs - Temmuz 2026")
+
+    st.markdown("""
+    Variteks firmasının fatura kayıtlarından elde edilen ham veriler; tarih, müşteri,
+    ülke, marka, ürün kodu, beden, renk ve satış adedi bilgilerini içermektedir.
+    Bu veriler aylık bazda toplanarak (aggregate edilerek) zaman serisi formatına
+    dönüştürülmüştür.
+
+    **Analiz edilen ürünler:**
+    - **Nexus Markası:** X2, X8, X10, X16 kodlu ürünler
+    - **Nitgo Markası:** N1 kodlu ürün (M, L, XL beden bazında ayrıştırılmış)
+    """)
+
+    st.markdown("---")
+
+    st.subheader("Veri Ön İşleme")
+    st.markdown("""
+    Ham verilerin doğrudan modellere verilmesi yanıltıcı sonuçlar üretebilir.
+    Bu nedenle aşağıdaki ön işleme adımları uygulanmıştır:
+
+    1. **Aykırı Değer Tespiti ve Düzeltme:** IQR (Tukey) yöntemi ile tespit edilen
+       aşırı büyük siparişler üst sınıra çekilmiştir. Böylece modelin trendi doğru
+       öğrenmesi sağlanmıştır.
+    2. **Özellik Mühendisliği (Feature Engineering):** Her bir zaman noktası için
+       gecikme değerleri (lag), hareketli ortalamalar, mevsimsellik göstergeleri
+       (sin/cos dönüşümleri), trend indeksi ve istatistiksel özetler türetilmiştir.
+    3. **Eğitim-Test Ayrımı:** Verinin son 5 ayı test seti olarak ayrılmış,
+       modellerin hiç görmediği bu dönem üzerinden performansları ölçülmüştür.
+    """)
+
+    st.markdown("---")
+
+    st.subheader("Kullanılan Tahmin Yöntemleri (8 Algoritma)")
+
+    col_ml, col_ts, col_basic = st.columns(3)
+
+    with col_ml:
+        st.markdown("**Makine Öğrenmesi**")
+        st.markdown("""
+        - **Random Forest:** Birden fazla karar ağacının ortalamasını alarak
+          tahmin üretir. Aşırı öğrenmeye karşı dayanıklıdır.
+        - **XGBoost:** Gradient Boosting tabanlı, sıralı ağaç eğitimi yapar.
+          Hata düzeltme mekanizması sayesinde yüksek doğruluk sağlar.
+        - **Doğrusal Regresyon:** Bağımsız değişkenlerle satış arasındaki
+          doğrusal ilişkiyi modelleyen klasik istatistiksel yöntem.
+        """)
+
+    with col_ts:
+        st.markdown("**Zaman Serisi**")
+        st.markdown("""
+        - **SARIMA:** Mevsimsel ARIMA modeli. Verideki trend ve mevsimsel
+          örüntüleri matematiksel olarak ayrıştırır.
+        - **Holt-Winters:** Üstel düzeltme yöntemi. Seviye, trend ve
+          mevsimsellik bileşenlerini ayrı ayrı modeller.
+        """)
+
+    with col_basic:
+        st.markdown("**Temel Yöntemler**")
+        st.markdown("""
+        - **Hareketli Ortalama (3 Ay):** Son 3 ayın ortalamasını tahmin
+          olarak kullanır.
+        - **Hareketli Ortalama (6 Ay):** Son 6 ayın ortalamasını tahmin
+          olarak kullanır.
+        - **Naive:** Son ayın değerini gelecek için sabit tahmin olarak
+          kullanır (kıyaslama amaçlı).
+        """)
+
+    st.markdown("---")
+
+    st.subheader("Değerlendirme Yaklaşımı")
+    st.markdown("""
+    Hata metrikleri olarak **MAE (Ortalama Mutlak Hata)**, **RMSE (Karekök Ortalama Kare Hata)**
+    ve **WMAPE (Ağırlıklı Ortalama Mutlak Yüzde Hata)** kullanılmıştır.
+
+    Geleneksel MAPE metriği, düşük satışlı aylarda yüzlerce kat şişerek yanıltıcı sonuçlar
+    üretebilmektedir. Bu nedenle endüstride yaygın olarak tercih edilen **WMAPE**
+    benimsenmiştir. WMAPE, toplam mutlak hatayı toplam gerçek satışa bölerek hesaplandığından,
+    düşük hacimli dönemlerin etkisini dengelemektedir.
+    """)
+
+    st.latex(r"WMAPE = \frac{\sum |Gerçek - Tahmin|}{\sum Gerçek} \times 100")
+
+    st.markdown("---")
+
+    st.subheader("Model Seçim Stratejisi")
+    st.markdown("""
+    Her ürün için 8 algoritmanın tamamı eğitim verisiyle öğretilmiş, ardından test verisi
+    üzerinde performansları karşılaştırılmıştır. **En düşük MAE değerine** sahip model,
+    o ürünün "en iyi modeli" olarak seçilmiş ve gelecek 3 aylık tahminler bu modelle
+    üretilmiştir. Naive modeli, yalnızca kıyaslama (benchmark) amacıyla tutulmuş olup
+    nihai seçimde dikkate alınmamıştır.
+
+    Bu yaklaşım sayesinde her ürün, kendi satış karakteristiğine en uygun algoritmayı
+    otomatik olarak kullanmaktadır.
+    """)
+
+    st.markdown("---")
+
+    st.subheader("Teknik Altyapı")
+    st.markdown("""
+    | Bileşen | Teknoloji |
+    |---|---|
+    | Programlama Dili | Python 3.13 |
+    | Veri İşleme | Pandas, NumPy |
+    | Makine Öğrenmesi | Scikit-learn, XGBoost |
+    | Zaman Serisi | Statsmodels (SARIMA, Holt-Winters) |
+    | Görselleştirme | Plotly |
+    | Web Arayüzü | Streamlit |
+    | Versiyon Kontrolü | GitHub |
+    """)
+
